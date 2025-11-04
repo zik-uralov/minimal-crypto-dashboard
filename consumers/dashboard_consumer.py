@@ -1,9 +1,19 @@
 import json
-import pandas as pd
-from datetime import datetime
-from confluent_kafka import Consumer, KafkaError
 from collections import defaultdict, deque
+from datetime import datetime, timezone
+
+import pandas as pd
+from confluent_kafka import Consumer, KafkaError
+
 from config import KAFKA_CONFIG, TOPICS, DASHBOARD_CONFIG
+
+
+def utc_now():
+    return datetime.now(timezone.utc)
+
+
+def utc_now_iso():
+    return utc_now().isoformat()
 
 class DashboardDataManager:
     def __init__(self):
@@ -54,14 +64,14 @@ class DashboardDataManager:
                 if msg.topic() == TOPICS['metrics']:
                     # Handle metrics data
                     symbol = data['symbol']
-                    data['dashboard_timestamp'] = datetime.utcnow().isoformat()
+                    data['dashboard_timestamp'] = utc_now_iso()
                     self.metrics_data[symbol].append(data)
                     self.current_prices[symbol] = data['current_price']
-                    self.last_update = datetime.utcnow()
+                    self.last_update = utc_now()
                     
                 elif msg.topic() == TOPICS['alerts']:
                     # Handle alert data
-                    data['dashboard_timestamp'] = datetime.utcnow().isoformat()
+                    data['dashboard_timestamp'] = utc_now_iso()
                     self.recent_alerts.append(data)
                         
         except KeyboardInterrupt:

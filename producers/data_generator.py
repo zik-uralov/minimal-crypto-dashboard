@@ -1,13 +1,17 @@
 import json
-import time
 import random
-from datetime import datetime
+import time
+from datetime import datetime, timezone
 from typing import Optional
 
 import requests
 from confluent_kafka import Producer
 
 from config import KAFKA_CONFIG, TOPICS, CRYPTO_SYMBOLS
+
+
+def utc_now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat()
 
 class CryptoDataGenerator:
     def __init__(self):
@@ -20,6 +24,11 @@ class CryptoDataGenerator:
         self.live_symbol_map = {
             'BTC/USDT': 'bitcoin',
             'ETH/USDT': 'ethereum',
+            'XRP/USDT': 'ripple',
+            'SOL/USDT': 'solana',
+            'DOGE/USDT': 'dogecoin',
+            'BAT/USDT': 'basic-attention-token',
+            'XYO/USDT': 'xyo-network',
         }
         self._live_reverse_map = {v: k for k, v in self.live_symbol_map.items()}
 
@@ -27,6 +36,11 @@ class CryptoDataGenerator:
         self.current_prices = {
             'BTC/USDT': 45000.0,
             'ETH/USDT': 3000.0,
+            'XRP/USDT': 0.6,
+            'SOL/USDT': 150.0,
+            'DOGE/USDT': 0.1,
+            'BAT/USDT': 0.25,
+            'XYO/USDT': 0.006,
         }
 
         self.volume_tracker = {symbol: 0 for symbol in CRYPTO_SYMBOLS}
@@ -94,6 +108,11 @@ class CryptoDataGenerator:
         base_sizes = {
             'BTC/USDT': (0.001, 0.05),
             'ETH/USDT': (0.01, 0.5),
+            'XRP/USDT': (50, 400),
+            'SOL/USDT': (0.05, 2),
+            'DOGE/USDT': (500, 5000),
+            'BAT/USDT': (200, 2000),
+            'XYO/USDT': (2000, 20000),
         }
         min_size, max_size = base_sizes.get(symbol, (1, 10))
         size = random.uniform(min_size, max_size)
@@ -105,7 +124,7 @@ class CryptoDataGenerator:
             'price': round(new_price, 4),
             'size': round(size, 4),
             'volume': round(trade_volume, 2),
-            'timestamp': datetime.utcnow().isoformat(),
+            'timestamp': utc_now_iso(),
             'exchange': 'coingecko',
             'side': random.choice(['buy', 'sell'])
         }

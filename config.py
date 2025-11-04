@@ -17,7 +17,15 @@ TOPICS = {
 }
 
 # Crypto Symbols to Monitor
-CRYPTO_SYMBOLS = ['BTC/USDT', 'ETH/USDT']
+CRYPTO_SYMBOLS = [
+    'BTC/USDT',
+    'ETH/USDT',
+    'XRP/USDT',
+    'SOL/USDT',
+    'DOGE/USDT',
+    'BAT/USDT',
+    'XYO/USDT',
+]
 
 # Dashboard Configuration
 DASHBOARD_CONFIG = {

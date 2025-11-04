@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
 import plotly.express as px
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import time
 from consumers.dashboard_consumer import data_manager
 from config import CRYPTO_SYMBOLS, DASHBOARD_CONFIG
@@ -54,30 +54,40 @@ def format_percentage(value):
     """Format number as percentage"""
     return f"{value:+.2f}%"
 
-def create_price_chart(metrics_data, symbol):
-    """Create a price chart for a symbol"""
-    if symbol not in metrics_data or not metrics_data[symbol]:
-        return go.Figure()
-    
-    df = pd.DataFrame(metrics_data[symbol])
-    df['timestamp'] = pd.to_datetime(df['timestamp'])
-    
+def create_price_chart(metrics_data, symbols, use_log_scale=False):
+    """Create a price chart for selected symbols."""
     fig = go.Figure()
+    palette = px.colors.qualitative.Plotly
     
-    fig.add_trace(go.Scatter(
-        x=df['timestamp'],
-        y=df['current_price'],
-        mode='lines',
-        name='Price',
-        line=dict(color='#1f77b4', width=2)
-    ))
+    for idx, symbol in enumerate(symbols):
+        if symbol not in metrics_data or not metrics_data[symbol]:
+            continue
+        
+        df = pd.DataFrame(metrics_data[symbol])
+        df['timestamp'] = pd.to_datetime(df['timestamp'])
+        
+        fig.add_trace(go.Scatter(
+            x=df['timestamp'],
+            y=df['current_price'],
+            mode='lines',
+            name=symbol,
+            line=dict(color=palette[idx % len(palette)], width=2)
+        ))
     
+    if not fig.data:
+        fig.update_layout(
+            title="Price Movement",
+            height=300,
+        )
+        return fig
+
     fig.update_layout(
-        title=f"{symbol} Price Movement",
+        title="Price Movement",
         xaxis_title="Time",
         yaxis_title="Price (USDT)",
         height=300,
-        showlegend=False
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+        yaxis_type="log" if use_log_scale else "linear",
     )
     
     return fig
@@ -143,7 +153,7 @@ def main():
     # Overview Section
     st.header("📈 Market Overview")
     if last_update:
-        st.caption(f"Last update: {last_update.strftime('%H:%M:%S UTC')}")
+        st.caption(f"Last update: {last_update.astimezone(timezone.utc).strftime('%H:%M:%S UTC')}")
     
     # Create columns for metrics
     cols = st.columns(len(CRYPTO_SYMBOLS))
@@ -174,19 +184,35 @@ def main():
     # Charts Section
     st.header("📊 Price & Volume Charts")
     
-    # Select symbol for detailed charts
-    selected_symbol = st.selectbox("Select Symbol for Detailed View", CRYPTO_SYMBOLS)
+    col_price, col_volume = st.columns(2)
     
-    if selected_symbol in metrics_data and metrics_data[selected_symbol]:
-        col1, col2 = st.columns(2)
+    with col_price:
+        selected_symbols = st.multiselect(
+            "Select symbols for price comparison",
+            CRYPTO_SYMBOLS,
+            default=CRYPTO_SYMBOLS[:2]
+        )
+        use_log_scale = st.checkbox("Use log scale", value=True, help="Helps compare prices across assets with very different magnitudes.")
         
-        with col1:
-            price_chart = create_price_chart(metrics_data, selected_symbol)
+        available_symbols = [
+            symbol for symbol in selected_symbols
+            if symbol in metrics_data and metrics_data[symbol]
+        ]
+
+        if available_symbols:
+            price_chart = create_price_chart(metrics_data, available_symbols, use_log_scale=use_log_scale)
             st.plotly_chart(price_chart, use_container_width=True)
+        else:
+            st.info("Select symbols that have data available.")
+    
+    with col_volume:
+        volume_symbol = st.selectbox("Select symbol for volume view", CRYPTO_SYMBOLS, index=0)
         
-        with col2:
-            volume_chart = create_volume_chart(metrics_data, selected_symbol)
+        if volume_symbol in metrics_data and metrics_data[volume_symbol]:
+            volume_chart = create_volume_chart(metrics_data, volume_symbol)
             st.plotly_chart(volume_chart, use_container_width=True)
+        else:
+            st.info("Volume data not available for the selected symbol yet.")
     
     # Alerts Section
     st.header("🚨 Recent Alerts")
@@ -230,9 +256,10 @@ def main():
     
     # Footer
     st.markdown("---")
+    footer_time = data['last_update'].astimezone(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC') if data['last_update'] else 'Never'
     st.markdown(
         "**Real-time Crypto Analytics Dashboard** | "
-        f"Last update: {data['last_update'].strftime('%Y-%m-%d %H:%M:%S') if data['last_update'] else 'Never'}"
+        f"Last update: {footer_time}"
     )
 
 if __name__ == "__main__":

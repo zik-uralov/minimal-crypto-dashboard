@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import os
 import signal
+import socket
 import subprocess
 import sys
 import time
@@ -37,6 +38,16 @@ def ensure_topics():
             if "Topic already exists" in str(exc):
                 continue
             print(f"⚠️ Failed to create topic {topic}: {exc}")
+
+
+def is_port_in_use(port: int) -> bool:
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        sock.settimeout(1)
+        try:
+            sock.connect(("127.0.0.1", port))
+            return True
+        except OSError:
+            return False
 
 def main():
     print("🚀 Starting Minimal Crypto Analytics Dashboard...")
@@ -89,9 +100,13 @@ def main():
             "--server.headless",
             "true",
         ]
-        proc_dashboard = subprocess.Popen(streamlit_cmd, env=with_project_env())
-        processes.append(proc_dashboard)
-        time.sleep(3)
+        if is_port_in_use(8501):
+            print("⚠️ Port 8501 already in use; skipping Streamlit launch. "
+                  "Use the existing dashboard instance or free the port.")
+        else:
+            proc_dashboard = subprocess.Popen(streamlit_cmd, env=with_project_env())
+            processes.append(proc_dashboard)
+            time.sleep(3)
 
         print("✅ All services started!")
         print("\n🌐 Access Points:")

@@ -1,9 +1,15 @@
 import json
 import time
-from datetime import datetime
-from confluent_kafka import Consumer, Producer, KafkaError
+from datetime import datetime, timezone
 from collections import defaultdict, deque
+
+from confluent_kafka import Consumer, Producer, KafkaError
+
 from config import KAFKA_CONFIG, TOPICS, CRYPTO_SYMBOLS, DASHBOARD_CONFIG
+
+
+def utc_now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat()
 
 class MetricsCalculator:
     def __init__(self):
@@ -79,7 +85,7 @@ class MetricsCalculator:
         
         metrics = {
             'symbol': symbol,
-            'timestamp': datetime.utcnow().isoformat(),
+            'timestamp': utc_now_iso(),
             'current_price': round(current_price, 4),
             'price_change': round(price_change, 4),
             'price_change_pct': round(price_change_pct, 2),
