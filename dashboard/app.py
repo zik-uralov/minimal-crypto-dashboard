@@ -41,36 +41,6 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-if 'full_screen' not in st.session_state:
-    st.session_state.full_screen = False
-
-options_container = st.container()
-with options_container:
-    spacer, menu_col = st.columns([10, 1])
-    with menu_col:
-        with st.popover("⋮", use_container_width=True):
-            st.session_state.full_screen = st.toggle(
-                "Full screen mode",
-                value=st.session_state.full_screen,
-            )
-
-if st.session_state.full_screen:
-    st.markdown("""
-    <style>
-        header {visibility: hidden;}
-        #MainMenu {visibility: hidden;}
-        footer {visibility: hidden;}
-    </style>
-    """, unsafe_allow_html=True)
-else:
-    st.markdown("""
-    <style>
-        header {visibility: visible;}
-        #MainMenu {visibility: visible;}
-        footer {visibility: visible;}
-    </style>
-    """, unsafe_allow_html=True)
-
 def start_data_consumer():
     """Start the data consumer in a separate thread"""
     thread = threading.Thread(target=data_manager.start_consuming, daemon=True)

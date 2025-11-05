@@ -46,6 +46,8 @@ class CryptoDataGenerator:
         self.volume_tracker = {symbol: 0 for symbol in CRYPTO_SYMBOLS}
         self._last_live_error_log = 0.0
         self._last_live_update = 0.0
+        self._backoff_until = 0.0
+        self._request_interval = 30  # seconds between API calls
     
     def delivery_report(self, err, msg):
         """Called once for each message produced to indicate delivery result."""
@@ -57,8 +59,14 @@ class CryptoDataGenerator:
         if not self.live_symbol_map:
             return
 
+        now = time.time()
+
+        # Respect backoff window if we recently received a rate-limit response.
+        if now < self._backoff_until:
+            return
+
         # Throttle outbound requests to avoid hammering the public API.
-        if time.time() - self._last_live_update < 10:
+        if now - self._last_live_update < self._request_interval:
             return
 
         url = "https://api.coingecko.com/api/v3/simple/price"
@@ -79,6 +87,15 @@ class CryptoDataGenerator:
                     symbol = self._live_reverse_map[market_symbol]
                     self.current_prices[symbol] = float(price)
                     self._last_live_update = time.time()
+                    self._backoff_until = 0.0
+        except requests.exceptions.HTTPError as exc:
+            status = exc.response.status_code if exc.response else None
+            if status == 429:
+                self._backoff_until = time.time() + 120  # back off for two minutes
+            if time.time() - self._last_live_error_log > 30:
+                msg = "Rate limit hit; backing off for 2 minutes." if status == 429 else str(exc)
+                print(f"⚠️ Live price fetch failed ({msg}); continuing with last known values.")
+                self._last_live_error_log = time.time()
         except Exception as exc:
             # Avoid spamming the console on transient network/API issues.
             if time.time() - self._last_live_error_log > 30:
