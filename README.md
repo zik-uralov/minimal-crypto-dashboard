@@ -1,7 +1,6 @@
 # 🚀 Minimal Crypto Analytics Dashboard
 
-| :---: |
-| ![Dashboard demo](docs/output_animation.gif) |
+![Dashboard demo](docs/output_animation.gif)
 
 A lightweight end-to-end pipeline that streams simulated and live-enriched cryptocurrency trades through Apache Kafka, computes rolling analytics, and renders them in a real-time Streamlit dashboard. It is intended as a reference implementation for experimenting with streaming data systems on a developer laptop.
 
